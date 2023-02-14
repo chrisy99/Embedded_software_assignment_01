@@ -8,19 +8,18 @@ const int signalB = 2  ;    // red
 int pushButton1State = 0;  // variable for reading the pushbutton status
 int pushButton2State = 0;  // variable for reading the pushbutton status
 
+//parameteres (microsenconds)
+int a = 200;
+int b = 900;
+int c = 15;// number of pulses
+int d = 5500;
+
 void setup() 
 {
   pinMode(signalA, OUTPUT);
   pinMode(signalB, OUTPUT);
   pinMode(pushButton1Pin, INPUT);
   pinMode(pushButton2Pin, INPUT);
-
-  //parameteres (microsenconds)
-  a = 200;
-  b = 900;
-  c = 15;// number of pulses
-  d = 5500;
-
 }
 
 void loop() 
@@ -29,12 +28,16 @@ void loop()
   pushButton1State = digitalRead(pushButton1Pin);
   pushButton2State = digitalRead(pushButton2Pin);
 
-
  //check if the pushbutton1 is pressed. If it is, enable stream of pulses
  if (pushButton1State == HIGH) 
  {
+    // watch dog
+    digitalWrite(signalB, HIGH);
+    delayMicroseconds(50); 
+    digitalWrite(signalB, LOW);
+    
     // check for waveform mod switch
-    if (pushButton2State == HIGH) 
+    if (pushButton2State == LOW ) 
     {
       c = 15; // normal mode
     } else {
@@ -42,7 +45,7 @@ void loop()
     }
 
     // pulse block
-    for (i =0; i <= c; i++)
+    for (int i = 0; i <= c; i++)
     {
       digitalWrite(signalA, HIGH);
       delayMicroseconds(i*50+a); 
@@ -50,12 +53,7 @@ void loop()
       delayMicroseconds(b);
     }
     delayMicroseconds(d);
- }
  } else {
     digitalWrite(signalA, LOW);
- }
-
-
- 
-  
+ } 
 }
