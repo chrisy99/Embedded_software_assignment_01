@@ -45,7 +45,7 @@ void loop()
     }
 
     // pulse block
-    for (int i = 0; i <= c; i++)
+    for (int i = 0; i < c; i++)
     {
       digitalWrite(signalA, HIGH);
       delayMicroseconds(i*50+a); 
