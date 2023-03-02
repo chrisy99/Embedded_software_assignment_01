@@ -1,3 +1,3 @@
-# Embedded_software_assignment_01
+# Embedded_software_assignment
 
-Contains tested code for waveform generator.
+Contains code for B31DGCylicExecutibeMonitor
