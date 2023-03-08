@@ -1,4 +1,7 @@
-#include <B31DGMonitor.h>/* 
+#include <B31DGMonitor.h>
+#include <Ticker.h>
+
+/* 
 B31DG Assignment 2
   
 */  
@@ -7,10 +10,14 @@ const int sqrSigA = 2; // Square wave signal input for task 2
 const int sqrSigB = 3; // Square wave signal input for task 3
 
 float f_sigA, f_sigB;
+
+int hyperCount = 0;
+Ticker ticker;
 #define SigA_fmin = 333;
 #define SigB_fmin = 500;
 #define SigA_fmax = 333;
 #define SigB_fmax = 500;
+#define Hyper_Period = 4; // 4ms
 
 
 B31DGCyclicExecutiveMonitor monitor;
@@ -21,11 +28,13 @@ void setup()
 
   pinMode(outSig, OUTPUT);
   pinMode(sqrSigA, INPUT);
-  pinMode(sqrSigB, INPUT);xs
+  pinMode(sqrSigB, INPUT);
 
   float f_sigA, f_sigB;
 
   Serial.begin(9600);
+
+  ticker.attach_ms(Hyper_Period, tick); // TODO : length of hyper period, define later
 }
 
 void PerformInstanceOfTask1()
@@ -37,10 +46,17 @@ void PerformInstanceOfTask1()
   monitor.jobEnded(1);
 }
 
-void loop(void)
+
+void tick()
 {
-  // Cyclic executive
+  hyperCount ++;
+
+  
 }
+
+void loop(void)
+{}
+
 void Task1()
 {
     digitalWrite(outSig, HIGH);
