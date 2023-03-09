@@ -13,11 +13,11 @@ float f_sigA, f_sigB;
 
 int hyperCount = 0;
 Ticker ticker;
-#define SigA_fmin = 333;
-#define SigB_fmin = 500;
-#define SigA_fmax = 333;
-#define SigB_fmax = 500;
-#define Hyper_Period = 4; // 4ms
+#define SigA_fmin 333
+#define SigB_fmin 500
+#define SigA_fmax 333
+#define SigB_fmax 500
+#define Hyper_Period 4
 
 
 B31DGCyclicExecutiveMonitor monitor;
@@ -51,7 +51,9 @@ void tick()
 {
   hyperCount ++;
 
-  
+  /**
+   * TODO : put schedule
+   */
 }
 
 void loop(void)
@@ -88,17 +90,21 @@ void Task4()
    */
 }
 
+float Scale(float f, float maxf, float minf)
+{
+  float fScaled = 0;
+  
+  if (f <  minf)       fScaled = 0;
+  else if (f >  maxf)  fScaled = 99;
+  else                 fScaled = (f - minf) * 99 / (maxf - minf);
+
+  return fScaled;
+}
 void Task5()
 {
-  float scaleA, scaleB;
-
   // frequencies of task 2 and 3 scaled between 0 and 99
-  if (f_sigA >=  333) scaleA = 0;
-  else if (f_sigA <=  1000) scaleA = 99;
-  else scaleA = (f_sigA - 333) * 99 / 667;
-  if (f_sigB >=  500) scaleA = 0;
-  if (f_sigB <=  1000) scaleA = 99;
-  else scaleB = (f_sigB - 500) * 99 / 500;
+  float scaleA = Scale(f_sigA, SigA_fmax, SigA_fmin);
+  float scaleB = Scale(f_sigB, SigB_fmax, SigB_fmin);
   
   // serial port log of scaled frequencies 
   Serial.print("Task 2 frequency, Task 3 frequency : (" );
