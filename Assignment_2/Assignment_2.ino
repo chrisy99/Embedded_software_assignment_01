@@ -4,8 +4,8 @@
   B31DG Assignment 2
 
 */
-const int outSig = 1; // output signal pin
-const int sqrSigA = 5; //7 Square wave signal input for task 2
+const int outSig = 4; // output signal pin
+const int sqrSigA = 1; //7 Square wave signal input for task 2
 const int sqrSigB = 9; //4 Square wave signal input for task 3
 const int ledPin = 19; //19
 const int analogOut = 3; //4
@@ -22,7 +22,7 @@ int t3_count = 0;
 int read_count = 0;
 int tickCount = 0;
 
-float readings[4] ;
+float readings[4];
 bool task2_frame = false;
 
 Ticker ticker;
@@ -176,7 +176,7 @@ void Task4()
   read_count++;
 }
 
-double Scale(double f, double maxf, double minf)
+int Scale(double f, double maxf, double minf)
 {
   double fScaled = 0;
 
@@ -184,13 +184,13 @@ double Scale(double f, double maxf, double minf)
   else if (f >  maxf)  fScaled = 99; // Upper scale bound
   else                 fScaled = (f - minf) * 99 / (maxf - minf); // scale equation
 
-  return fScaled;
+  return (int)fScaled;
 }
 void Task5()
 {
-  float start, endtime;
+  // float start, endtime;
 
-  float scaleA, scaleB ;
+  int scaleA, scaleB ;
   // frequencies of task 2 and 3 scaled between 0 and 99
   monitor.jobStarted(5);
   scaleA = Scale(f_sigA, SigA_fmax, SigA_fmin);
