@@ -1,21 +1,24 @@
 #include <B31DGMonitor.h>
 #include <Ticker.h>
-//  B31DG Assignment 2
-
+/**  
+ * B31DG Assignment 2
+ * Author : Christopher Yip  
+ * Submission 17/3/2023
+ */
 const int outSig = 4; // output signal pin
 const int sqrSigA = 1; //7 Square wave signal input for task 2
 const int sqrSigB = 9; //4 Square wave signal input for task 3
-const int ledPin = 19; //19
-const int analogOut = 3; //4
-const int filterSize = 4;
+const int ledPin = 19; 
+const int analogOut = 3; // Read pin for potentiometer
+const int filterSize = 4;// Task 4 value num filter
 
-const int SigA_Tmax = 3100;
-const int SigB_Tmax = 2100;
+const int SigA_Tmax = 3100; // max period for task 2
+const int SigB_Tmax = 2100; // max period for task 3
 
-const int SigA_fmin = 333;
-const int SigB_fmin = 500;
-const int SigA_fmax = 1000;
-const int SigB_fmax = 1000;
+const int SigA_fmin = 333; // min frequency bound for task 2 
+const int SigB_fmin = 500; 
+const int SigA_fmax = 1000; 
+const int SigB_fmax = 1000; 
 const int tickT = 4;       // LCM of all task periods
 
 const float halfThresh = 2047.5; // half of max from potentiometer (4095.00)
@@ -26,13 +29,10 @@ double f_sigA = 0;
 double f_sigB = 0;
 bool task3_delay = false;
 
-int t3_count = 0;
 int read_count = 0;
 int tickCount = 0;
 
-float readings[4];
-bool task2_frame = false;
-
+float readings[4]; // store for potentiometer readings
 Ticker ticker;
 
 B31DGCyclicExecutiveMonitor monitor;
@@ -81,6 +81,10 @@ void Task1(){
   monitor.jobEnded(1);
 }
 
+/**
+ * PulseIn adaptation to reduce read time and include time out as parameter
+ * Returns full period as 2*pulse in microseconds
+ */
 double pulseIn2(int pin, long timeout){ 
   double period;  
   if (digitalRead(pin) == HIGH)
@@ -144,10 +148,13 @@ void Task4(){
   read_count++;
 }
 
+/**
+ * Returned scaled f between min and max bound 
+ */
 int Scale(double f, double maxf, double minf){
   double fScaled = 0;
 
-  if (f <  minf)       fScaled = 0;  // Lxower scale bound
+  if (f <  minf)       fScaled = 0;  // Lower scale bound
   else if (f >  maxf)  fScaled = 99; // Upper scale bound
   else                 fScaled = (f - minf) * 99 / (maxf - minf); // scale equation
 
