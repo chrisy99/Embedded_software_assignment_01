@@ -9,11 +9,14 @@ const int ledPin = 19; //19
 const int analogOut = 3; //4
 const int filterSize = 4;
 
+const int SigA_Tmax = 3100;
+const int SigB_Tmax = 2100;
+
 const int SigA_fmin = 333;
 const int SigB_fmin = 500;
 const int SigA_fmax = 1000;
 const int SigB_fmax = 1000;
-const int Hyper_Period = 4;
+const int tickT = 4;       // LCM of all task periods
 
 const float halfThresh = 2047.5; // half of max from potentiometer (4095.00)
 
@@ -39,39 +42,29 @@ void setup(){
   pinMode(ledPin, OUTPUT);
   pinMode(sqrSigA, INPUT);
   pinMode(sqrSigB, INPUT);
-
   Serial.begin(9600);
   
   monitor.startMonitoring();
-  ticker.attach_ms(4, tick); // TODO : length of hyper period, define later
+  ticker.attach_ms(tickT, tick); 
   tick();
 }
 
 void tick(){
   Task1();
-  task2_frame = ((tickCount+1) % 5 == 0);
   
-  if (tickCount % 2 == 0){
-    if (!task2_frame){
-      Task3();
-    }
-    else{
-      task3_delay = true;  
-    } 
-  }else if (task3_delay){
-    Task3();
-    task3_delay = false;
-  }
-  if (task2_frame){
-      Task2();
-      Task4();
-  }
-  if (tickCount % 25 == 0)  Task5(); 
-
+  if (tickCount % 10 == 4) Task2();
+  if (tickCount % 10 == 9) Task2();
+  if (tickCount % 10 == 0) Task3();
+  if (tickCount % 10 == 2) Task3();
+  if (tickCount % 10 == 5) Task3();
+  if (tickCount % 10 == 6) Task3();
+  if (tickCount % 10 == 8) Task3();
+  if (tickCount % 5  == 0) Task4();
+  if (tickCount % 25 == 0) Task5(); 
   tickCount++;
-  if (tickCount == 50) tickCount = 0;
+  if (tickCount == 50) tickCount = 0; // cycle reset
 }
-
+  
 void loop(void)
 {}
 
@@ -104,6 +97,9 @@ double pulseIn2(int pin, long timeout){
 void Task2(){
   monitor.jobStarted(2);
   f_sigA = pulseIn2(sqrSigA, 3100);
+  if (f_sigA == SigA_Tmax){
+    f_sigA = SigA_fmin; // zero value from timeout set to worst case period to avoid inf freqeuncy 
+  }
   f_sigA = 1000000 / f_sigA;
   monitor.jobEnded(2);
 }
@@ -111,6 +107,9 @@ void Task2(){
 void Task3(){
   monitor.jobStarted(3);
   f_sigB = pulseIn2(sqrSigB, 2100);
+  if (f_sigB == SigB_Tmax){
+    f_sigB = SigB_fmin; // zero value from timeout set to worst case period to avoid inf freqeuncy
+  }
   f_sigB = 1000000 / f_sigB;
   monitor.jobEnded(3);  
 }
@@ -121,13 +120,12 @@ void Task4(){
   float sum;
   float num;
   long filterVal;
-  sum = 0;
+  sum = 0;                                                    
   readings[read_count % filterSize ] = analogRead(analogOut);
 
   // adjusts for when less then 4 readings(filter size) have been recorded
   if (read_count < filterSize) {
     num = read_count;
-    read_count++;
   } else {
     num = filterSize;
   }
@@ -143,6 +141,7 @@ void Task4(){
     digitalWrite(ledPin, LOW);
   }
   monitor.jobEnded(4);
+  read_count++;
 }
 
 int Scale(double f, double maxf, double minf){
