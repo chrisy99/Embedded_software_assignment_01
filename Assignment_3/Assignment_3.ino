@@ -101,8 +101,8 @@ double pulseIn2(int pin, long timeout){
 void Task2(){
   monitor.jobStarted(2);
   f_sigA = pulseIn2(sqrSigA, 3100);
-  if (f_sigA == SigA_Tmax){
-    f_sigA = SigA_fmin; // zero value from timeout set to worst case period to avoid inf freqeuncy 
+  if (f_sigA == 0){
+    f_sigA = SigB_Tmax; // zero value from timeout set to worst case period to avoid inf freqeuncy 
   }
   f_sigA = 1000000 / f_sigA;
   monitor.jobEnded(2);
@@ -111,8 +111,8 @@ void Task2(){
 void Task3(){
   monitor.jobStarted(3);
   f_sigB = pulseIn2(sqrSigB, 2100);
-  if (f_sigB == SigB_Tmax){
-    f_sigB = SigB_fmin; // zero value from timeout set to worst case period to avoid inf freqeuncy
+  if (f_sigB == 0){
+    f_sigB = SigB_Tmax; // zero value from timeout set to worst case period to avoid inf freqeuncy
   }
   f_sigB = 1000000 / f_sigB;
   monitor.jobEnded(3);  
