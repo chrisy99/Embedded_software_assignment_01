@@ -1,20 +1,26 @@
+
 #include <B31DGMonitor.h>
 #include <Ticker.h>
+
 /**  
- * B31DG Assignment 2
+ * B31DG Assignment 3
  * Author : Christopher Yip  
- * Submission 17/3/2023
  */
+
+ // Signal pins 
 const int outSig = 4; // output signal pin
 const int sqrSigA = 1; //7 Square wave signal input for task 2
 const int sqrSigB = 9; //4 Square wave signal input for task 3
-const int ledPin = 19; 
+const int ledPin = 19; // T4
 const int analogOut = 3; // Read pin for potentiometer
-const int filterSize = 4;// Task 4 value num filter
+const int buttonPin = 7;
+const int led2Pin = 8;
 
+// Task 4 value num filter
+const int filterSize = 4;
+// boundary constant values
 const int SigA_Tmax = 3100; // max period for task 2
 const int SigB_Tmax = 2100; // max period for task 3
-
 const int SigA_fmin = 333; // min frequency bound for task 2 
 const int SigB_fmin = 500; 
 const int SigA_fmax = 1000; 
@@ -28,6 +34,12 @@ float worst_time = 0;
 double f_sigA = 0;
 double f_sigB = 0;
 bool task3_delay = false;
+
+int ledState = HIGH;        // the current state of the output pin
+int buttonState;            // the current reading from the input pin
+int lastButtonState = LOW;  // the previous reading from the input pin
+unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
+unsigned long debounceDelay = 0;    // the debounce time; increase if the output flickers
 
 int read_count = 0;
 int tickCount = 0;
@@ -44,9 +56,14 @@ void setup(){
   pinMode(sqrSigB, INPUT);
   Serial.begin(9600);
   
-  monitor.startMonitoring();
-  ticker.attach_ms(tickT, tick); 
-  tick();
+  //monitor.startMonitoring();
+  //ticker.attach_ms(tickT, tick); 
+  //tick();
+  pinMode(buttonPin, INPUT);
+  pinMode(led2Pin, OUTPUT);
+
+  // set initial LED state
+  digitalWrite(led2Pin, ledState);
 }
 
 void tick(){
@@ -66,8 +83,54 @@ void tick(){
 }
   
 void loop(void)
-{}
+{
+  for (;;){
+    Debounce();
+  }
+  }
 
+// Code from arduino examples -> digital -> Debounce
+void Debounce(){
+  // read the state of the switch into a local variable:
+  int reading = digitalRead(buttonPin);
+
+  // check to see if you just pressed the button
+  // (i.e. the input went from LOW to HIGH), and you've waited long enough
+  // since the last press to ignore any noise:
+
+  // If the switch changed, due to noise or pressing:
+  if (reading != lastButtonState) {
+    // reset the debouncing timer
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // whatever the reading is at, it's been there for longer than the debounce
+    // delay, so take it as the actual current state:
+
+    // if the button state has changed:
+    if (reading != buttonState) {
+      buttonState = reading;
+
+      // only toggle the LED if the new button state is HIGH
+      if (buttonState == HIGH) {
+        ledState = !ledState;
+      }
+    }
+  }
+
+  // set the LED:
+  digitalWrite(led2Pin, ledState);
+
+  // save the reading. Next time through the loop, it'll be the lastButtonState:
+  lastButtonState = reading;
+}
+
+// additional task for assignment 3
+void Task0(){
+  // TODO
+    // refactor from Debounce()
+}
 void Task1(){
   monitor.jobStarted(1);
   digitalWrite(outSig, HIGH);

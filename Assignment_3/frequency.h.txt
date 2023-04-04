@@ -1,0 +1,8 @@
+#ifndef FREQ_H
+#define FREQ_H
+
+struct frequency {
+	float t2;
+	float t3;
+}
+#endif
