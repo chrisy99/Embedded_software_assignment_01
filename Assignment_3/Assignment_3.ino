@@ -1,6 +1,4 @@
-
-#include <B31DGMonitor.h>
-#include <Ticker.h>
+//#include "frequency.h"
 
 /**  
  * B31DG Assignment 3
@@ -13,8 +11,8 @@ const int sqrSigA = 1; //7 Square wave signal input for task 2
 const int sqrSigB = 9; //4 Square wave signal input for task 3
 const int ledPin = 19; // T4
 const int analogOut = 3; // Read pin for potentiometer
-const int buttonPin = 7;
-const int led2Pin = 8;
+const int buttonPin = 6;
+const int led2Pin = 7;
 
 // Task 4 value num filter
 const int filterSize = 4;
@@ -25,123 +23,93 @@ const int SigA_fmin = 333; // min frequency bound for task 2
 const int SigB_fmin = 500; 
 const int SigA_fmax = 1000; 
 const int SigB_fmax = 1000; 
-const int tickT = 4;       // LCM of all task periods
+
+// Task periods
+const int P_T1 = 4;
+const int P_T2 = 20;
+const int P_T3 = 8;
+const int P_T4 = 20;
+const int P_T5 = 100;
+const int P_T6 = 10;
 
 const float halfThresh = 2047.5; // half of max from potentiometer (4095.00)
 
-float start_time, end_time;
-float worst_time = 0;
-double f_sigA = 0;
-double f_sigB = 0;
-bool task3_delay = false;
+// semaphore to store and accesss frequencies from task 2,3 and 5
+SemaphoreHandle_t sem_sigAB;
 
+// Event queue for task 6,1) debounce and 2) led
+QueueHandle_t t6_queue;
+
+// Task 6 fields
 int ledState = HIGH;        // the current state of the output pin
 int buttonState;            // the current reading from the input pin
 int lastButtonState = LOW;  // the previous reading from the input pin
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long debounceDelay = 0;    // the debounce time; increase if the output flickers
-
-int read_count = 0;
-int tickCount = 0;
+unsigned long debounceDelay = 0.2;    // the debounce time; increase if the output flickers
 
 float readings[4]; // store for potentiometer readings
-Ticker ticker;
+int read_count = 0;
 
-B31DGCyclicExecutiveMonitor monitor;
-
-void setup(){
-  pinMode(outSig, OUTPUT);
-  pinMode(ledPin, OUTPUT);
-  pinMode(sqrSigA, INPUT);
-  pinMode(sqrSigB, INPUT);
-  Serial.begin(9600);
-  
-  //monitor.startMonitoring();
-  //ticker.attach_ms(tickT, tick); 
-  //tick();
-  pinMode(buttonPin, INPUT);
-  pinMode(led2Pin, OUTPUT);
-
-  // set initial LED state
-  digitalWrite(led2Pin, ledState);
-}
-
-void tick(){
-  Task1();
-  
-  if (tickCount % 10 == 4) Task2();
-  if (tickCount % 10 == 9) Task2();
-  if (tickCount % 10 == 0) Task3();
-  if (tickCount % 10 == 2) Task3();
-  if (tickCount % 10 == 5) Task3();
-  if (tickCount % 10 == 6) Task3();
-  if (tickCount % 10 == 8) Task3();
-  if (tickCount % 5  == 0) Task4();
-  if (tickCount % 25 == 0) Task5(); 
-  tickCount++;
-  if (tickCount == 50) tickCount = 0; // cycle reset
-}
-  
-void loop(void)
-{
-  for (;;){
-    Debounce();
-  }
-  }
+struct frequency {
+	float t2;
+	float t3;
+} frequency;
 
 // Code from arduino examples -> digital -> Debounce
-void Debounce(){
-  // read the state of the switch into a local variable:
-  int reading = digitalRead(buttonPin);
+void Task6_1( void * pvParameters ){
+  (void) pvParameters;
+  for (;;)
+  {
+    int reading = digitalRead(buttonPin);
 
-  // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH), and you've waited long enough
-  // since the last press to ignore any noise:
-
-  // If the switch changed, due to noise or pressing:
-  if (reading != lastButtonState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
-  }
-
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // whatever the reading is at, it's been there for longer than the debounce
-    // delay, so take it as the actual current state:
-
-    // if the button state has changed:
-    if (reading != buttonState) {
-      buttonState = reading;
-
-      // only toggle the LED if the new button state is HIGH
-      if (buttonState == HIGH) {
-        ledState = !ledState;
+    // If the switch changed, due to noise or pressing:
+    if (reading != lastButtonState) {
+      lastDebounceTime = millis();
+    }
+    Serial.println(millis() - lastDebounceTime);
+    if ((millis() - lastDebounceTime) > debounceDelay) {
+      
+      // if the button state has changed:
+      if (reading != buttonState) {
+        buttonState = reading; 
+        xQueueSend(t6_queue, &buttonState, 10);
       }
     }
+    lastButtonState = reading;
+    vTaskDelay(P_T6 / portTICK_PERIOD_MS);
   }
+}
+void Task6_2( void * pvParameters ){
+  (void) pvParameters;
+  for (;;)
+  {
+    if (xQueueReceive(t6_queue, &buttonState, 10) == pdPASS){
+      if (buttonState == HIGH){
+        ledState = !ledState;
+        digitalWrite(led2Pin, ledState);
+      }
+        // set the LED:
 
-  // set the LED:
-  digitalWrite(led2Pin, ledState);
-
-  // save the reading. Next time through the loop, it'll be the lastButtonState:
-  lastButtonState = reading;
+      
+    }
+    vTaskDelay(P_T6 / portTICK_PERIOD_MS);
+  }
 }
 
-// additional task for assignment 3
-void Task0(){
-  // TODO
-    // refactor from Debounce()
-}
-void Task1(){
-  monitor.jobStarted(1);
-  digitalWrite(outSig, HIGH);
-  delayMicroseconds(200);
-  digitalWrite(outSig, LOW);
+void Task1( void * pvParameters ){
+  (void) pvParameters;
+  for(;;)
+  {
+    digitalWrite(outSig, HIGH);
+    delayMicroseconds(200);
+    digitalWrite(outSig, LOW);
 
-  delayMicroseconds(50);
-  digitalWrite(outSig, HIGH);
-  delayMicroseconds(30);
-  digitalWrite(outSig, LOW);
-  monitor.jobEnded(1);
+    delayMicroseconds(50);
+    digitalWrite(outSig, HIGH);
+    delayMicroseconds(30);
+    digitalWrite(outSig, LOW);
+    vTaskDelay(P_T1 / portTICK_PERIOD_MS);
+  }
 }
 
 /**
@@ -161,78 +129,171 @@ double pulseIn2(int pin, long timeout){
   return 2 * (double)period;
 }
 
-void Task2(){
-  monitor.jobStarted(2);
-  f_sigA = pulseIn2(sqrSigA, 3100);
-  if (f_sigA == 0){
-    f_sigA = SigB_Tmax; // zero value from timeout set to worst case period to avoid inf freqeuncy 
-  }
-  f_sigA = 1000000 / f_sigA;
-  monitor.jobEnded(2);
+void Task2( void * pvParameters ){
+  (void) pvParameters;
+  float f_sigA;
+  for(;;)
+  {
+    if(xSemaphoreTake(sem_sigAB,portMAX_DELAY) == pdTRUE){
+      f_sigA = pulseIn2(sqrSigA, 3100);
+      if (f_sigA == 0){
+        f_sigA = SigB_Tmax; // zero value from timeout set to worst case period to avoid inf freqeuncy 
+      }
+      frequency.t2 = 1000000 / f_sigA;
+      xSemaphoreGive(sem_sigAB);
+    }
+    vTaskDelay(P_T2 / portTICK_PERIOD_MS);
+  } 
 }
 
-void Task3(){
-  monitor.jobStarted(3);
-  f_sigB = pulseIn2(sqrSigB, 2100);
-  if (f_sigB == 0){
-    f_sigB = SigB_Tmax; // zero value from timeout set to worst case period to avoid inf freqeuncy
+void Task3( void * pvParameters ){
+  (void) pvParameters;
+  float f_sigB;
+  for(;;)
+  {
+    if(xSemaphoreTake(sem_sigAB,portMAX_DELAY) == pdTRUE){
+      f_sigB = pulseIn2(sqrSigB, 2100);
+      if (f_sigB == 0){
+        f_sigB = SigB_Tmax; // zero value from timeout set to worst case period to avoid inf freqeuncy
+      }
+      frequency.t3 = 1000000 / f_sigB;
+      xSemaphoreGive(sem_sigAB);
+    }
+    vTaskDelay(P_T3 / portTICK_PERIOD_MS);
   }
-  f_sigB = 1000000 / f_sigB;
-  monitor.jobEnded(3);  
 }
 
-void Task4(){
-  monitor.jobStarted(4);
-  
-  float sum;
-  float num;
-  long filterVal;
-  sum = 0;                                                    
-  readings[read_count % filterSize ] = analogRead(analogOut);
+void Task4( void * pvParameters ){
+  (void) pvParameters;
+  for(;;)
+  {
+    float sum;
+    float num;
+    long filterVal;
+    sum = 0;                                                    
+    readings[read_count % filterSize ] = analogRead(analogOut);
 
-  // adjusts for when less then 4 readings(filter size) have been recorded
-  if (read_count < filterSize) {
-    num = read_count;
-  } else {
-    num = filterSize;
-  }
+    // adjusts for when less then 4 readings(filter size) have been recorded
+    if (read_count < filterSize) {
+      num = read_count;
+    } else {
+      num = filterSize;
+    }
 
-  for (int i = 0; i < num ; i++) {
-    sum += readings[i];
-  }
+    for (int i = 0; i < num ; i++) {
+      sum += readings[i];
+    }
 
-  filterVal = sum / filterSize;
-  if (filterVal > halfThresh){
-    digitalWrite(ledPin, HIGH);
-  } else {
-    digitalWrite(ledPin, LOW);
+    filterVal = sum / filterSize;
+    if (filterVal > halfThresh){
+      digitalWrite(ledPin, HIGH);
+    } else {
+      digitalWrite(ledPin, LOW);
+    }
+    read_count++;
+    vTaskDelay(P_T4 / portTICK_PERIOD_MS);
   }
-  monitor.jobEnded(4);
-  read_count++;
 }
 
-/**
- * Returned scaled f between min and max bound 
- */
-int Scale(double f, double maxf, double minf){
-  double fScaled = 0;
-
-  if (f <  minf)       fScaled = 0;  // Lower scale bound
-  else if (f >  maxf)  fScaled = 99; // Upper scale bound
-  else                 fScaled = (f - minf) * 99 / (maxf - minf); // scale equation
-
-  return (int)fScaled;
-}
-
-void Task5(){
+void Task5( void * pvParameters ){
+  (void) pvParameters;
   int scaleA, scaleB ;
-  // frequencies of task 2 and 3 scaled between 0 and 99
-  monitor.jobStarted(5);
-  scaleA = Scale(f_sigA, SigA_fmax, SigA_fmin);
-  scaleB = Scale(f_sigB, SigB_fmax, SigB_fmin);
-                                                                                                                               
-  Serial.print(scaleA);
-  Serial.print(",");
-  Serial.println(scaleB);
-  monitor.jobEnded(5);
+  for(;;)
+  {
+    if(xSemaphoreTake(sem_sigAB,portMAX_DELAY) == pdTRUE){
+      // frequencies of task 2 and 3 scaled between 0 and 99
+      scaleA = map(frequency.t2, SigA_fmax, SigA_fmin,0 ,99);
+      scaleB = map(frequency.t3, SigB_fmax, SigB_fmin,0 ,99);
+                                                                                                                                  
+      Serial.print(scaleA);
+      Serial.print(",");
+      Serial.println(scaleB);
+      xSemaphoreGive(sem_sigAB);
+    }
+    vTaskDelay(P_T5 / portTICK_PERIOD_MS);
+  }
 }
+
+void setup(){
+  Serial.begin(9600);
+
+  pinMode(outSig, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(sqrSigA, INPUT);
+  pinMode(sqrSigB, INPUT);
+  pinMode(buttonPin, INPUT);
+  pinMode(led2Pin, OUTPUT);
+
+  sem_sigAB = xSemaphoreCreateMutex();  
+
+  t6_queue = xQueueCreate(1, sizeof(float));
+  // set initial LED state
+  digitalWrite(led2Pin, ledState);
+
+   xTaskCreate(
+        Task1,
+        "task 1",
+        512,
+        NULL,
+        4,
+        NULL);
+
+    xTaskCreate(
+        Task2,
+        "task 2",
+        512,
+        NULL,
+        3,
+        NULL);
+
+    xTaskCreate(
+        Task3,
+        "task 3",
+        1024,
+        NULL,
+        3,
+        NULL);
+
+    xTaskCreate(
+        Task4,
+        "task 4",
+        1024,
+        NULL,
+        2,
+        NULL);
+
+    xTaskCreate(
+        Task5,
+        "task 5",
+        1024,
+        NULL,
+        1,
+        NULL);
+
+    xTaskCreate(
+        Task6_1,
+        "task 6.1",
+        512,
+        NULL,
+        1,
+        NULL);
+
+    xTaskCreate(
+        Task6_2,
+        "task 6.2",
+        1024,
+        NULL,
+        1,
+        NULL);
+}
+
+void loop(void)
+{
+  /*
+  for (;;){
+    Task6_1();
+    Task6_2();
+    Serial.println("");
+  }*/
+  }
+  
